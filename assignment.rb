@@ -31,11 +31,11 @@ class Assignment
     repo.start_with?("#{@config['assignment']}-") && branch == @config['branch']
   end
 
-  def grade(owner, repo, branch, commit)
+  def grade(owner, repo, branch, commit, log: nil)
     token = @config['token']
     repos = @config['repos'] || []
     
-    ws = Workspace.new(repo)
+    ws = Workspace.new(repo, log)
     ws.checkout(token, owner, repo, 'code', branch, commit)
     repos.each do |r|
       if r.include?('/')

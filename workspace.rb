@@ -4,10 +4,14 @@ require 'shellwords'
 require 'tmpdir'
 
 class Workspace
-  def initialize(repo)
+  def initialize(repo, log)
     @path = Dir.mktmpdir(repo, File.dirname(__FILE__) + '/workspace')
     @cwd = @path
-    @log = File.open(File.join(@path, '/output.log'), 'w')
+    if log.nil?
+      @log = File.open(File.join(@path, '/output.log'), 'w')
+    else
+      @log = log
+    end
     step('Create workspace: ' + @path)
   end
 
@@ -20,7 +24,7 @@ class Workspace
     url = "https://github.com/#{owner}/#{repo}.git"
     begin
       cmd('git', 'init', name)
-      chdir(name) do
+      dir(name) do
         cmd('git', 'config', '--local', 'credential.username', '***')
         cmd('git', 'config', '--local', 'credential.helper', 'store --file=../.gitcredentials')
         if ref
@@ -36,7 +40,7 @@ class Workspace
       FileUtils.rm(creds.path)
     end
   rescue Exception => e
-    log_exception(e)
+    @log.puts(e.to_s)
     raise
   end
 
@@ -44,7 +48,7 @@ class Workspace
     step('Shell script ' + path)
     cmd('/bin/bash', '-x', '-e', File.join(@cwd, path))
   rescue Exception => e
-    log_exception(e)
+    @log.puts(e.to_s)
     raise
   end
 
@@ -52,57 +56,43 @@ class Workspace
     step("Reading #{path}")
     File.read(File.join(@cwd, path))
   rescue Exception => e
-    log_exception(e)
+    @log.puts(e.to_s)
     raise
   end
 
   def cleanup(keep_ws)
     if keep_ws
-      step("Keeping the workspace")
-      @log.close
-      @log = nil
+      step("Cleanup: Keeping the workspace")
     else
       step('Cleanup')
-      @log.close
-      @log = nil
       FileUtils.rm_rf(@path)
     end
   rescue Exception => e
-    log_exception(e)
+    @log.puts(e.to_s)
     raise
   end
 
   private
   def step(str)
     @log.puts("[Step] #{str}")
-    f = File.open(File.join(@path, '.state'))
-    f.puts(str)
-    f.close
+    File.open(File.join(@path, '.state'), 'w') { |f| f.puts(str) }
   end
 
   def cmd(*args)
     @log.puts("[Cmd] " + args.shelljoin)
     out, status = Open3.capture2(*args, chdir: @cwd)
-    @log.puts(out)
+    @log.puts(out) if out.length > 0
     raise "#{args[0]} returned #{status}" unless status == 0
   end
 
-  def chdir(dir)
+  def dir(path)
     curr_cwd = @cwd
     begin
-      @cwd = File.join(@cwd, dir)
+      @cwd = File.join(@cwd, path)
       yield
     ensure
       @cwd = curr_cwd
     end
   end
-
-  def log_exception(exception)
-    @log.puts(exception.to_s)
-    @log.close
-    @log = nil
-  end
-
 end 
-
 # vim: sw=2 sts=2 ts=8 expandtab

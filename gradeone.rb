@@ -21,5 +21,5 @@ unless assignment.match?(repo, branch)
   exit(1)
 end
 
-assignment.grade(owner, repo, branch, commit)
+assignment.grade(owner, repo, branch, commit, log: $stdout)
 # vim: set sw=2 sts=2 ts=8 expandtab:
