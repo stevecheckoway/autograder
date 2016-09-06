@@ -46,13 +46,15 @@ class Assignment
       end
       ws.checkout(token, extra_owner, extra_repo, extra_repo, 'master', nil)
     end
-    ws.shellscript(@config['scriptfile'])
+    status = ws.shellscript(@config['scriptfile'])
 
     if @config['commentfile']
       body = ws.read(@config['commentfile'])
       body = "```\n@{body}\n```" if @config['codecomment']
       # XXX: Leave a comment on the commit.
     end
+
+    # XXX: Set the status on GitHub
 
     ws.cleanup(@config['keep_ws'])
   end
