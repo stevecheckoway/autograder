@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sinatra'
+require 'sinatra/base'
 require 'json'
 
 configure do
@@ -19,7 +19,7 @@ class AutoGrader < Sinatra::Base
     verify_signature(content)
     event = request.env['HTTP_X_GITHUB_EVENT']
     # Only handle push events for now.
-    handle_push(data) if event == 'push'
+    PushJob.perform_async(data) if event == 'push'
     ''
   end
 
@@ -31,10 +31,6 @@ class AutoGrader < Sinatra::Base
     sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
     rsig = request.env['HTTP_X_HUB_SIGNATURE']
     halt(400, "Invalid signature") unless Rack::Utils.secure_compare(sig, rsig)
-  end
-
-  def handle_push(push)
-    puts 'What up, push?'
   end
 
   run! if app_file == $0
