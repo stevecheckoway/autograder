@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require './autograder'
+require_relative 'autograder'
 
-run AutoGrader
+run AutoGrader::AutoGrader
