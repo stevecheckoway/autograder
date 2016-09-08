@@ -4,15 +4,42 @@ require 'sinatra/base'
 require 'json'
 
 require_relative 'pushjob'
+require_relative 'grade'
 
 module AutoGrader
   class AutoGrader < Sinatra::Base
     configure do
       set :server, :puma
     end
+
+    helpers do
+      def protected!
+        @auth ||= Rack::Auth::Basic::Request.new(request.env)
+        return if @auth.provided? && @auth.basic? && @auth.credentials == ['admin', ENV['ADMIN_PASSWORD']]
+        headers['WWW-Authenticate'] = 'Basic realm="Restricted Area"'
+        halt(401, "Not authorized\n")
+      end
+    end
   
     get '/status' do
       'Alive!'
+    end
+
+    get '/admin' do
+      protected!
+      grades = Grade.last(20).reverse
+      erb :admin, locals: { grades: grades }
+    end
+
+    get '/output/:id' do |id|
+      protected!
+      begin
+        grade = Grade.find(id)
+      rescue ActiveRecord::RecordNotFound => ex
+        halt(404, "Invalid output id")
+      end
+      content_type('text/plain')
+      Zlib.inflate(grade.output)
     end
   
     post '/github_webhooks' do
