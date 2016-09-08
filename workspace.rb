@@ -38,7 +38,7 @@ module AutoGrader
           cmd('git', 'config', '--local', '--remove-section', 'credential')
         end
       ensure
-        FileUtils.rm(creds.path)
+        #FileUtils.rm(creds.path)
       end
     rescue Exception => e
       @log.puts(e.to_s)

@@ -11,8 +11,8 @@ module AutoGrader
       set :server, :puma
     end
   
-    get '/' do
-      'It lives!'
+    get '/status' do
+      'Alive!'
     end
   
     post '/github_webhooks' do
@@ -21,9 +21,10 @@ module AutoGrader
       # Ensure the signature matches.
       verify_signature(content)
       event = request.env['HTTP_X_GITHUB_EVENT']
+      payload = JSON.parse(content)
       # Only handle push events for now.
-      PushJob.perform_async(data) if event == 'push'
-      ''
+      PushJob.perform_async(payload) if event == 'push'
+      "#{event} response"
     end
   
     private
@@ -33,7 +34,9 @@ module AutoGrader
       secret = ENV['GITHUB_WEBHOOKS_SECRET']
       sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
       rsig = request.env['HTTP_X_HUB_SIGNATURE']
-      halt(400, "Invalid signature") unless Rack::Utils.secure_compare(sig, rsig)
+      unless Rack::Utils.secure_compare(sig, rsig)
+        halt(400, "Invalid signature") unless Rack::Utils.secure_compare(sig, rsig)
+      end
     end
   
     run! if app_file == $0

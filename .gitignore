@@ -5,3 +5,6 @@
 /workspace
 /autograder.log
 /grades.db
+/grade.db
+/stderr.log
+/stdout.log

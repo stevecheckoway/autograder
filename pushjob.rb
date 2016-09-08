@@ -17,6 +17,7 @@ module AutoGrader
       repo   = data['repository']['name']
       branch = data['ref']
       commit = data['head_commit']['id']
+      logger.info("Push for #{owner}/#{repo} on branch #{branch} at commit #{commit}")
   
       unless branch.start_with?('refs/heads/')
         logger.error("Unexpected ref \"#{branch}\" in push for #{owner}/#{repo}")
@@ -37,15 +38,22 @@ module AutoGrader
         next unless assignment.match?(repo, branch)
         logger.info("Running matching assignment #{path} on #{owner}/#{repo} #{branch}")
         log = StringIO.new('', 'w')
-        success = assignment.grade(owner, repo, branch, commit, log: log)
+        begin
+          success = assignment.grade(owner, repo, branch, commit, log: log)
+          output = log.string
+          status = success ? 'S' : 'F'
+        rescue Exception => ex
+          status = 'E'
+	  output = log.string + ex.to_s
+          logger.error(output)
+        end
         log.close
-        output = Zlib.deflate(log.string)
         Grade.create(organization: owner,
                      assignment: assignment.assignment,
                      repository: repo,
                      commit: commit,
-                     success: success,
-                     output: output)
+                     status: status,
+                     output: Zlib.deflate(output))
         break
       end
     end

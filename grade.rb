@@ -12,8 +12,8 @@ ActiveRecord::Schema.define do
       table.column :assignment, :string
       table.column :repository, :string
       table.column :commit, :string
-      table.column :success, :boolean
-      table.column :output, :blob
+      table.column :status, :string, limit: 1
+      table.column :output, :binary
     end
   end
 end
