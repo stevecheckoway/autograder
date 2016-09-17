@@ -32,37 +32,66 @@ module AutoGrader
       @config['assignment']
     end
   
-    def match?(repo, branch)
-      repo.start_with?("#{@config['assignment']}-") && branch == @config['branch']
+    def match?(organization, repo, branch)
+      organization == @config['organization'] && 
+      repo.start_with?("#{@config['assignment']}-") &&
+      branch == @config['branch']
     end
   
     def grade(owner, repo, branch, commit, log: nil)
       token = @config['token']
       repos = @config['repos'] || []
-      
+      full_name = "#{owner}/#{repo}"
+      client = Octokit::Client.new(access_token: token)
+      status_options = { context: 'autograder', description: 'Autograding about to begin' }
+      client.create_status(full_name, commit, 'pending', status_options)
+      status = nil
       ws = Workspace.new(repo, log)
-      ws.checkout(token, owner, repo, 'code', branch, commit)
-      repos.each do |r|
-        if r.include?('/')
-          extra_owner, extra_repo = r.split('/', 2)
-        else
-          extra_owner = owner
-          extra_repo = r
+      comment = nil
+      desc = ''
+      begin
+        ws.checkout(token, owner, repo, 'code', branch, commit)
+        repos.each do |r|
+          if r.include?('/')
+            extra_owner, extra_repo = r.split('/', 2)
+          else
+            extra_owner = owner
+            extra_repo = r
+          end
+          ws.checkout(token, extra_owner, extra_repo, extra_repo, 'master', nil)
         end
-        ws.checkout(token, extra_owner, extra_repo, extra_repo, 'master', nil)
+        timeout = @config['timeout'] || 120
+        delay = @config['delay'] || 1
+        status, comment = ws.shellscript(@config['scriptfile'], timeout:timeout, delay:delay)
+      ensure
+        if status.nil?
+          state = 'error'
+          desc = 'Autograder grading script error'
+        elsif status.signaled?
+          state = 'failure'
+          desc = 'Autograding tests timed out or were killed'
+        elsif status.success?
+          state = 'success'
+          desc = 'All autograding tests passed successfully'
+        else
+          state = 'failure'
+          desc 'One ore more autograding tests failed'
+        end
+        url = "https://github.com/#{full_name}/commit/#{commit}"
+        status_options = { context: 'autograder', description: desc, target_url: url }
+        client.create_status(full_name, commit, state, status_options)
+        ws.cleanup(@config['keep_ws'])
       end
-      status = ws.shellscript(@config['scriptfile'])
   
-      if @config['commentfile']
-        body = ws.read(@config['commentfile'])
-        body = "```\n@{body}\n```" if @config['codecomment']
-        # XXX: Leave a comment on the commit.
+      # Add comment to commit.
+      if comment.nil?
+        body = desc
+      else
+        body = "#{desc}:\n#{comment}"
       end
-  
-      # XXX: Set the status on GitHub
-  
-      ws.cleanup(@config['keep_ws'])
-      status == 0
+      body = "```\n#{body}\n```" if @config['codecomment']
+      client.create_commit_comment(full_name, commit, body)
+      !status.nil? && status.success?
     end
   end
 end

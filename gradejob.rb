@@ -8,34 +8,26 @@ require_relative 'log'
 SuckerPunch.logger = AutoGrader.logger
 
 module AutoGrader
-  class PushJob
+  class GradeJob
     include SuckerPunch::Job
     workers 4
   
-    def perform(data)
-      owner  = data['repository']['owner']['name']
-      repo   = data['repository']['name']
-      branch = data['ref']
-      commit = data['head_commit']['id']
+    def perform(owner, repo, branch, commit)
       logger.info("Push for #{owner}/#{repo} on branch #{branch} at commit #{commit}")
-  
-      unless branch.start_with?('refs/heads/')
-        logger.error("Unexpected ref \"#{branch}\" in push for #{owner}/#{repo}")
-        return
-      end
-      branch['refs/heads/'] = ''
   
       if owner.include?('.') || owner.include?('/')
         logger.error("Unexpected character . or / in repository owner #{owner}")
         return
       end
       
-      # Iterate through assignments in 'assignments/:owner/' and run the first
-      # matching assignment.
-      Dir[File.dirname(__FILE__) + "/assignments/#{owner}/*.yaml"].each do |path|
+      # Iterate through assignments in 'assignments/:owner/' and
+      # 'assignments/' and run the first matching assignment.
+      dir = File.join(File.dirname(__FILE__), 'assignments')
+      globs = [File.join(dir, "#{owner}/*.yaml"), File.join(dir, '*.yaml')]
+      Dir.glob(globs).each do |path|
         assignment = Assignment.load(path)
         next if assignment.nil?
-        next unless assignment.match?(repo, branch)
+        next unless assignment.match?(owner, repo, branch)
         logger.info("Running matching assignment #{path} on #{owner}/#{repo} #{branch}")
         log = StringIO.new('', 'w')
         begin
@@ -51,6 +43,7 @@ module AutoGrader
         Grade.create(organization: owner,
                      assignment: assignment.assignment,
                      repository: repo,
+                     branch: branch,
                      commit: commit,
                      status: status,
                      output: Zlib.deflate(output))

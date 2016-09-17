@@ -1,7 +1,8 @@
 require 'fileutils'
-require 'open3'
 require 'shellwords'
 require 'tmpdir'
+
+require_relative 'subprocess'
 
 module AutoGrader
   class Workspace
@@ -22,8 +23,8 @@ module AutoGrader
       creds.write("https://***:#{token}@github.com\n")
       creds.close
       
-      url = "https://github.com/#{owner}/#{repo}.git"
       begin
+        url = "https://github.com/#{owner}/#{repo}.git"
         cmd('git', 'init', name)
         dir(name) do
           cmd('git', 'config', '--local', 'credential.username', '***')
@@ -38,16 +39,28 @@ module AutoGrader
           cmd('git', 'config', '--local', '--remove-section', 'credential')
         end
       ensure
-        #FileUtils.rm(creds.path)
+        FileUtils.rm(creds.path)
       end
     rescue Exception => e
       @log.puts(e.to_s)
       raise
     end
   
-    def shellscript(path)
+    def shellscript(path, timeout: 120, delay: 1)
       step('Shell script ' + path)
-      cmd('/bin/bash', '-x', '-e', File.join(@cwd, path), return_status: true)
+      comment = []
+      env = { 'PATH' => '/usr/local/bin:/usr/bin:/bin',
+              'BASH_FUNC_comment%%' => '() { if [ $# -gt 0 ];then echo "$@" >&3;else cat >&3;fi }' }
+      status = Subprocess.run('/bin/bash', '-x', '-e', path, fds: [:out, :err, 3],
+                              chdir:@cwd, timeout: timeout, delay: delay,
+                              env: env) do |fd, line|
+        if fd == 3
+          comment << line
+        else
+          @log.puts(line)
+        end
+      end
+      return status, comment.join('')
     rescue Exception => e
       @log.puts(e.to_s)
       raise
@@ -79,12 +92,12 @@ module AutoGrader
       File.open(File.join(@path, '.state'), 'w') { |f| f.puts(str) }
     end
   
-    def cmd(*args, return_status: false)
+    def cmd(*args)
       @log.puts("[Cmd] " + args.shelljoin)
-      out, status = Open3.capture2(*args, chdir: @cwd)
-      @log.puts(out) if out.length > 0
-      return status if return_status
-      raise "#{args[0]} returned #{status}" unless status == 0
+      status = Subprocess.run(*args, fds: [:out, :err], chdir: @cwd) do |fd, line|
+        @log.puts(line)
+      end
+      raise "#{args[0]} #{status.to_s}" unless status.success?
     end
   
     def dir(path)

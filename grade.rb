@@ -11,8 +11,10 @@ ActiveRecord::Schema.define do
       table.column :organization, :string
       table.column :assignment, :string
       table.column :repository, :string
+      table.column :branch, :string
       table.column :commit, :string
       table.column :status, :string, limit: 1
+      table.column :created_at, :datetime
       table.column :output, :binary
     end
   end

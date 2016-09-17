@@ -3,7 +3,7 @@
 require 'sinatra/base'
 require 'json'
 
-require_relative 'pushjob'
+require_relative 'gradejob'
 require_relative 'grade'
 
 module AutoGrader
@@ -14,10 +14,14 @@ module AutoGrader
 
     helpers do
       def protected!
-        @auth ||= Rack::Auth::Basic::Request.new(request.env)
-        return if @auth.provided? && @auth.basic? && @auth.credentials == ['admin', ENV['ADMIN_PASSWORD']]
+        return if authorized?
         headers['WWW-Authenticate'] = 'Basic realm="Restricted Area"'
         halt(401, "Not authorized\n")
+      end
+
+      def authorized?
+        @auth ||= Rack::Auth::Basic::Request.new(request.env)
+        @auth.provided? && @auth.basic? && @auth.credentials == ['admin', ENV['ADMIN_PASSWORD']]
       end
     end
   
@@ -46,18 +50,26 @@ module AutoGrader
       request.body.rewind
       content = request.body.read
       # Ensure the signature matches.
-      verify_signature(content)
+      verify_signature!(content)
       event = request.env['HTTP_X_GITHUB_EVENT']
       payload = JSON.parse(content)
       # Only handle push events for now.
-      PushJob.perform_async(payload) if event == 'push'
+
+      if event == 'push'
+        owner  = payload['repository']['owner']['name']
+        repo   = payload['repository']['name']
+        branch = payload['ref']
+        branch['refs/heads/'] = ''
+        commit = payload['head_commit']['id']
+        GradeJob.perform_async(owner, repo, branch, commit)
+      end
       "#{event} response"
     end
   
     private
     HMAC_DIGEST = OpenSSL::Digest.new('sha1')
   
-    def verify_signature(content)
+    def verify_signature!(content)
       secret = ENV['GITHUB_WEBHOOKS_SECRET']
       sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
       rsig = request.env['HTTP_X_HUB_SIGNATURE']
