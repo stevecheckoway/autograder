@@ -16,8 +16,8 @@ repo   = ARGV[2]
 branch = ARGV[3]
 commit = ARGV[4]
 
-unless assignment.match?(repo, branch)
-  puts("Repository \"#{repo}\" and branch \"#{branch}\" does not match assignment.")
+unless assignment.match?(owner, repo, branch)
+  puts("Repository \"#{owner}/#{repo}\" and branch \"#{branch}\" does not match assignment.")
   exit(1)
 end
 
