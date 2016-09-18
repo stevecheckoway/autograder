@@ -1,9 +1,12 @@
-root = "#{Dir.getwd}"
+#!/usr/bin/env puma
 
-pidfile "#{root}/tmp/puma/pid"
-state_path "#{root}/tmp/puma/state"
-rackup "#{root}/config.ru"
+basedir = File.expand_path('..', File.dirname(__FILE__))
+rootdir = basedir
 
-threads 4, 8
+directory(basedir)
+rackup(File.join(basedir, 'config.ru'))
 
+pidfile(File.join(rootdir, '/var/run/autograder/autograder.pid'))
+state_path(File.join(rootdir, '/var/run/autograder/state'))
+threads(0, 16)
 activate_control_app

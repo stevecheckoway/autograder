@@ -4,7 +4,7 @@ module AutoGrader
   module_function
   def logger
     if @logger.nil?
-      @logger = Logger.new('autograder.log', 10, 1024000)
+      @logger = Logger.new('var/log/autograder.log', 10, 1024000)
       @logger.level = Logger::INFO
     end
     @logger
