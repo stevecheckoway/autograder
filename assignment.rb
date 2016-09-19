@@ -14,7 +14,7 @@ module AutoGrader
       require_params(path, config, 'token', 'assignment', 'branch', 'scriptfile')
       Assignment.new(config)
     end
-  
+
     def self.require_params(path, config, *params)
       params.each do |param|
         if config[param].nil?
@@ -23,21 +23,21 @@ module AutoGrader
       end
     end
     private_class_method :require_params
-  
+
     def initialize(config)
       @config = config
     end
-  
+
     def assignment
       @config['assignment']
     end
-  
+
     def match?(organization, repo, branch)
-      organization == @config['organization'] && 
+      organization == @config['organization'] &&
       repo.start_with?("#{@config['assignment']}-") &&
       branch == @config['branch']
     end
-  
+
     def grade(owner, repo, branch, commit, log: nil)
       token = @config['token']
       repos = @config['repos'] || []
@@ -82,7 +82,7 @@ module AutoGrader
         client.create_status(full_name, commit, state, status_options)
         ws.cleanup(@config['keep_ws'])
       end
-  
+
       # Add comment to commit.
       if comment.nil?
         body = desc
