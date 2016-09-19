@@ -2,14 +2,20 @@
 
 require 'sinatra/base'
 require 'json'
+require 'yaml'
 
+require_relative 'log'
 require_relative 'gradejob'
 require_relative 'grade'
 
 module AutoGrader
   class AutoGrader < Sinatra::Base
     configure do
+      use Rack::CommonLogger, ::AutoGrader.logger
       set :server, :puma
+      File.open('config/secrets.yaml', 'r') do |f|
+        set :secrets, YAML.safe_load(f.read, filename: 'config/secrets.yaml')
+      end
     end
 
     helpers do
@@ -21,10 +27,11 @@ module AutoGrader
 
       def authorized?
         @auth ||= Rack::Auth::Basic::Request.new(request.env)
-        @auth.provided? && @auth.basic? && @auth.credentials == ['admin', ENV['ADMIN_PASSWORD']]
+        @auth.provided? && @auth.basic? &&
+          @auth.credentials == ['admin', settings.secrets['admin_password']]
       end
     end
-  
+
     get '/status' do
       'Alive!'
     end
@@ -45,7 +52,7 @@ module AutoGrader
       content_type('text/plain')
       Zlib.inflate(grade.output)
     end
-  
+
     post '/github_webhooks' do
       request.body.rewind
       content = request.body.read
@@ -65,19 +72,19 @@ module AutoGrader
       end
       "#{event} response"
     end
-  
+
     private
     HMAC_DIGEST = OpenSSL::Digest.new('sha1')
-  
+
     def verify_signature!(content)
-      secret = ENV['GITHUB_WEBHOOKS_SECRET']
+      secret = settings.secrets['github_webhooks_secret'] || ''
       sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
       rsig = request.env['HTTP_X_HUB_SIGNATURE']
       unless Rack::Utils.secure_compare(sig, rsig)
         halt(400, "Invalid signature") unless Rack::Utils.secure_compare(sig, rsig)
       end
     end
-  
+
     run! if app_file == $0
   end
 end

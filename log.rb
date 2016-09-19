@@ -1,13 +1,15 @@
 require 'logger'
 
+Logger.class_eval { alias :write :'<<' }
+
 module AutoGrader
   module_function
   def logger
-    if @logger.nil?
-      @logger = Logger.new('var/log/autograder.log', 10, 1024000)
-      @logger.level = Logger::INFO
+    @logger ||= begin
+      logger = Logger.new($stdout)
+      logger.level = Logger::INFO
+      logger
     end
-    @logger
   end
 end
 

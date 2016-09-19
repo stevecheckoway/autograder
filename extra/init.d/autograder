@@ -1,0 +1,50 @@
+#!/bin/sh
+# kFreeBSD do not accept scripts as interpreters, using #!/bin/sh and sourcing.
+if [ true != "$INIT_D_SCRIPT_SOURCED" ] ; then
+    set "$0" "$@"; INIT_D_SCRIPT_SOURCED=true . /lib/init/init-d-script
+fi
+
+### BEGIN INIT INFO
+# Provides:          autograder
+# Requires-Start:    $remote_fs $syslog
+# Requires-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Autograder initscript.
+# Description:       Autograder initscript.
+### END INIT INFO
+
+# Author: Stephen Checkoway <sfc@uic.edu>
+
+### START CONFIGURATION
+# Set this to the autograder base directory.
+APPDIR=/var/lib/autograder/autograder
+DAEMON_USER=autograder
+### END CONFIGURATION
+
+RUNDIR=/var/run/autograder
+LOGDIR=/var/log/autograder
+PIDFILE=$RUNDIR/autograder.pid
+STATEFILE=$RUNDIR/state
+SOCKETFILE=$RUNDIR/socket
+
+START_ARGS="--chdir $APPDIR --chuid $DAEMON_USER"
+DAEMON=$APPDIR/sbin/puma
+DAEMON_ARGS="-e production"
+
+do_start_prepare() {
+  mkdir -p "$RUNDIR"
+  chmod -R 0755 "$RUNDIR"
+  chown -R "$DAEMON_USER" "$RUNDIR"
+  mkdir -p "$LOGDIR"
+  chmod -R 0750 "$LOGDIR"
+  chown -R "$DAEMON_USER" "$LOGDIR"
+}
+
+do_stop_cleanup() {
+  rm -rf "$RUNDIR"
+}
+
+alias do_reload=do_reload_sigusr1
+
+# vim: set sw=2 sts=2 ts=8 expandtab:

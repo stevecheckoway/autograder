@@ -1,3 +1,5 @@
 /.bundle
-/vendor
+/config/secrets.yaml
 /grades.db
+/sbin
+/vendor
