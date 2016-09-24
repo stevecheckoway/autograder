@@ -1,10 +1,10 @@
-<h1>Admin view</h1>
+<h1><%= if organization; organization+' '; else; '' end %>Admin view</h1>
 <table>
-	<tr><th>ID</th><th>Organization</th><th>Assignment</th><th>Repository</th><th>Commit</th><th>Status</th><th>Output</th></tr>
+	<tr><th>ID</th><% if organization.nil? %><th>Organization</th><% end %><th>Assignment</th><th>Repository</th><th>Commit</th><th>Status</th><th>Output</th></tr>
 	<% grades.each do |grade| %>
 	<tr>
 		<td><%= grade.id %></td>
-		<td><%= grade.organization %></td>
+		<% if organization.nil? %><td><%= grade.organization %></td><% end %>
 		<td><%= grade.assignment %></td>
 		<td><%= grade.repository %></td>
 		<td><a href="https://github.com/<%= grade.organization %>/<%= grade.repository %>/commit/<%= grade.commit %>"><%= grade.commit[0,7] %></a></td>

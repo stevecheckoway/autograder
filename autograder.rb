@@ -19,16 +19,21 @@ module AutoGrader
     end
 
     helpers do
-      def protected!
-        return if authorized?
+      def protected!(organization)
+        return if authorized?(organization)
         headers['WWW-Authenticate'] = 'Basic realm="Restricted Area"'
         halt(401, "Not authorized\n")
       end
 
-      def authorized?
+      def authorized?(organization)
         @auth ||= Rack::Auth::Basic::Request.new(request.env)
-        @auth.provided? && @auth.basic? &&
-          @auth.credentials == ['admin', settings.secrets['admin_password']]
+        return false unless @auth.provided? && @auth.basic?
+        creds = @auth.credentials
+        # Check for global admin, regardless of organization.
+        return true if creds == ['admin', settings.secrets['admin_password']]
+        # Check for organization admin.
+        return false if organization.nil? || settings.secrets[organization].nil?
+        creds == [organization, settings.secrets[organization]['admin_password']]
       end
     end
 
@@ -37,18 +42,24 @@ module AutoGrader
     end
 
     get '/admin' do
-      protected!
+      protected!(nil)
       grades = Grade.last(20).reverse
-      erb :admin, locals: { grades: grades }
+      erb :admin, locals: { grades: grades, organization: nil }
+    end
+
+    get '/admin/:organization' do |organization|
+      protected!(organization)
+      grades = Grade.where(organization: organization).last(20).reverse
+      erb :admin, locals: { grades: grades, organization: organization }
     end
 
     get '/output/:id' do |id|
-      protected!
       begin
         grade = Grade.find(id)
       rescue ActiveRecord::RecordNotFound => ex
         halt(404, "Invalid output id")
       end
+      protected!(grade.organization)
       content_type('text/plain')
       Zlib.inflate(grade.output)
     end
@@ -57,13 +68,13 @@ module AutoGrader
       request.body.rewind
       content = request.body.read
       # Ensure the signature matches.
-      verify_signature!(content)
-      event = request.env['HTTP_X_GITHUB_EVENT']
       payload = JSON.parse(content)
+      owner  = payload['repository']['owner']['name']
+      verify_signature!(owner, content)
+      event = request.env['HTTP_X_GITHUB_EVENT']
       # Only handle push events for now.
 
       if event == 'push'
-        owner  = payload['repository']['owner']['name']
         repo   = payload['repository']['name']
         branch = payload['ref']
         branch['refs/heads/'] = ''
@@ -76,8 +87,9 @@ module AutoGrader
     private
     HMAC_DIGEST = OpenSSL::Digest.new('sha1')
 
-    def verify_signature!(content)
-      secret = settings.secrets['github_webhooks_secret'] || ''
+    def verify_signature!(organization, content)
+      org = settings.secrets[organization]
+      secret = org && org['github_webhooks_secret'] || ''
       sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
       rsig = request.env['HTTP_X_HUB_SIGNATURE']
       unless Rack::Utils.secure_compare(sig, rsig)
