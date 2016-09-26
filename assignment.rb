@@ -62,7 +62,11 @@ module AutoGrader
         end
         timeout = @config['timeout'] || 120
         delay = @config['delay'] || 1
-        status, comment = ws.shellscript(@config['scriptfile'], timeout:timeout, delay:delay)
+        if @config['docker']
+          status, comment = ws.docker(@config['docker'], @config['scriptfile'], timeout: timeout, delay:delay)
+        else
+          status, comment = ws.shellscript(@config['scriptfile'], timeout:timeout, delay:delay)
+        end
       ensure
         if status.nil?
           state = 'error'

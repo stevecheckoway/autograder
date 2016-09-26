@@ -65,6 +65,41 @@ module AutoGrader
       @log.puts(e.to_s)
       raise
     end
+
+    def docker(image, path, timeout: 120, delay: 10)
+      step("Docker (#{image}) shell script #{path}")
+      # Path relative to the workspace.
+      relative = File.basename(@path)
+      File.open(File.join(@path, 'wrapper.sh'), 'w') do |f|
+        f.write <<-EOF
+comment() {
+  if [ $# -gt 0 ]; then
+    echo "$@" >&3
+  else
+    cat >&3
+  fi
+}
+export -f comment
+timeout \
+  --signal TERM \
+  --kill-after #{delay.to_i} \
+  --preserve-status \
+  #{timeout.to_i} \
+  /bin/bash -x -e #{Shellwords.escape(path)} 3>.comment
+        EOF
+      end
+      status = Subprocess.run('sudo',
+                              "/usr/local/bin/run-#{image}.sh", relative, 'wrapper.sh',
+                              fds: [:out, :err]) do |fd, line|
+        @log.puts(line)
+      end
+      begin
+        comment = File.read(File.join(@path, '.comment'))
+      rescue
+        comment = ''
+      end
+      return status, comment
+    end
   
     def read(path)
       step("Reading #{path}")
