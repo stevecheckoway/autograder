@@ -62,6 +62,6 @@ docker run \
 	-v "$tmpdir":/home/grader:Z \
 	--rm \
 	--read-only \
-	--ulimit nproc=20 \
+	--ulimit nproc=50 \
 	ag-image \
 	/bin/bash "$script"
