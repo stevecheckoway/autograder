@@ -1,0 +1,22 @@
+[Unit]
+Description=Autograder Puma Server
+After=network.target
+
+[Service]
+Type=simple
+User=autograder
+PermissionsStartOnly=true
+WorkingDirectory=/var/lib/autograder/autograder
+Environment="rundir=/var/run/autograder" "logdir=/var/log/autograder"
+ExecStartPre=/bin/mkdir -p ${rundir}
+ExecStartPre=/bin/chmod -R 0755 ${rundir}
+ExecStartPre=/bin/chown -R autograder ${rundir}
+ExecStartPre=/bin/mkdir -p ${logdir}
+ExecStartPre=/bin/chmod -R 0755 ${logdir}
+ExecStartPre=/bin/chown -R autograder ${logdir}
+ExecStart=/var/lib/autograder/autograder/sbin/puma -e production
+ExecStopPost=/bin/rm -rf ${rundir}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
