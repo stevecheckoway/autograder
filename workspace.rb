@@ -60,7 +60,8 @@ module AutoGrader
           @log.puts(line)
         end
       end
-      return status, comment.join('')
+      comment = comment.join('').encode('UTF-8', undef: :replace, invalid: :replace, universal_newline: true)
+      return status, comment
     rescue Exception => e
       @log.puts(e.to_s)
       raise
@@ -95,6 +96,7 @@ timeout \
       end
       begin
         comment = File.read(File.join(@path, '.comment'))
+        comment.encode!('UTF-8', undef: :replace, invalid: :replace, universal_newline: true)
       rescue
         comment = ''
       end

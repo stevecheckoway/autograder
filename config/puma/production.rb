@@ -3,7 +3,7 @@
 directory(File.expand_path('../..', File.dirname(__FILE__)))
 rackup('config.ru')
 
-daemonize(true)
+daemonize(false)
 pidfile('/var/run/autograder/autograder.pid')
 state_path('/var/run/autograder/state')
 stdout_redirect('/var/log/autograder/autograder.log',

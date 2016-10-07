@@ -69,12 +69,12 @@ module AutoGrader
       content = request.body.read
       # Ensure the signature matches.
       payload = JSON.parse(content)
-      owner  = payload['repository']['owner']['name']
-      verify_signature!(owner, content)
+      verify_signature!(content)
       event = request.env['HTTP_X_GITHUB_EVENT']
       # Only handle push events for now.
 
       if event == 'push'
+        owner  = payload['repository']['owner']['name']
         repo   = payload['repository']['name']
         branch = payload['ref']
         branch['refs/heads/'] = ''
@@ -87,13 +87,12 @@ module AutoGrader
     private
     HMAC_DIGEST = OpenSSL::Digest.new('sha1')
 
-    def verify_signature!(organization, content)
-      org = settings.secrets[organization]
-      secret = org && org['github_webhooks_secret'] || ''
+    def verify_signature!(content)
+      secret = settings.secrets['github_webhooks_secret'] || ''
       sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
       rsig = request.env['HTTP_X_HUB_SIGNATURE']
       unless Rack::Utils.secure_compare(sig, rsig)
-        halt(400, "Invalid signature") unless Rack::Utils.secure_compare(sig, rsig)
+        halt(400, "Invalid signature for #{organization}") unless Rack::Utils.secure_compare(sig, rsig)
       end
     end
 

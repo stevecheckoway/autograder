@@ -28,7 +28,7 @@ PIDFILE=$RUNDIR/autograder.pid
 STATEFILE=$RUNDIR/state
 SOCKETFILE=$RUNDIR/socket
 
-START_ARGS="--chdir $APPDIR --chuid $DAEMON_USER"
+START_ARGS="--chdir $APPDIR --chuid $DAEMON_USER --background"
 DAEMON=$APPDIR/sbin/puma
 DAEMON_ARGS="-e production"
 

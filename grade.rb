@@ -3,7 +3,7 @@ require_relative 'log'
 
 ActiveRecord::Base.logger = AutoGrader.logger
 
-ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: 'grades.db')
+ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: 'grades.db', pool: 16)
 
 ActiveRecord::Schema.define do
   unless ActiveRecord::Base.connection.data_sources.include? 'grades'
