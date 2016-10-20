@@ -29,6 +29,13 @@ module AutoGrader
         next if assignment.nil?
         next unless assignment.match?(owner, repo, branch)
         logger.info("Running matching assignment #{path} on #{owner}/#{repo} #{branch}")
+        grade = Grade.create(organization: owner,
+                             assignment: assignment.assignment,
+                             repository: repo,
+                             branch: branch,
+                             commit: commit,
+                             status: 'R',
+                             output: nil)
         log = StringIO.new('', 'w')
         begin
           success = assignment.grade(owner, repo, branch, commit, log: log)
@@ -40,13 +47,11 @@ module AutoGrader
           logger.error(output)
         end
         log.close
-        Grade.create(organization: owner,
-                     assignment: assignment.assignment,
-                     repository: repo,
-                     branch: branch,
-                     commit: commit,
-                     status: status,
-                     output: Zlib.deflate(output))
+        logger.info("Grading #{owner}/#{repo} #{branch} finished with status #{status}")
+        # Update the database
+        grade.status = status
+        grade.output = Zlib.deflate(output)
+        grade.save
         break
       end
     end

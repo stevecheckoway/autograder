@@ -43,13 +43,13 @@ module AutoGrader
 
     get '/admin' do
       protected!(nil)
-      grades = Grade.last(20).reverse
+      grades = Grade.select(:id, :organization, :assignment, :repository, :commit, :status, :created_at).last(100).reverse
       erb :admin, locals: { grades: grades, organization: nil }
     end
 
     get '/admin/:organization' do |organization|
       protected!(organization)
-      grades = Grade.where(organization: organization).last(20).reverse
+      grades = Grade.select(:id, :organization, :assignment, :repository, :commit, :status, :created_at).where(organization: organization).last(100).reverse
       erb :admin, locals: { grades: grades, organization: organization }
     end
 
@@ -61,6 +61,7 @@ module AutoGrader
       end
       protected!(grade.organization)
       content_type('text/plain')
+      return '*** In progress ***' if grade.output.nil?
       Zlib.inflate(grade.output)
     end
 
@@ -68,18 +69,30 @@ module AutoGrader
       request.body.rewind
       content = request.body.read
       # Ensure the signature matches.
-      payload = JSON.parse(content)
       verify_signature!(content)
       event = request.env['HTTP_X_GITHUB_EVENT']
       # Only handle push events for now.
 
       if event == 'push'
+        begin
+          payload = JSON.parse(content, create_additions: false)
+        rescue JSON::ParserError
+          halt(400, 'Invalid JSON payload')
+        end
         owner  = payload['repository']['owner']['name']
         repo   = payload['repository']['name']
         branch = payload['ref']
-        branch['refs/heads/'] = ''
-        commit = payload['head_commit']['id']
-        GradeJob.perform_async(owner, repo, branch, commit)
+        commit = payload['head_commit'] && payload['head_commit']['id']
+        if commit.nil?
+          logger.warn("Push payload missing head_commit:\n#{content}")
+          commit = payload['after']
+        end
+        if owner && repo && branch && commit && branch.start_with?('refs/heads/')
+          branch['refs/heads/'] = ''
+          GradeJob.perform_async(owner, repo, branch, commit)
+        else
+          logger.warn("Invalid push payload:\n#{content}")
+        end
       end
       "#{event} response"
     end
@@ -92,7 +105,7 @@ module AutoGrader
       sig = 'sha1=' + OpenSSL::HMAC.hexdigest(HMAC_DIGEST, secret, content)
       rsig = request.env['HTTP_X_HUB_SIGNATURE']
       unless Rack::Utils.secure_compare(sig, rsig)
-        halt(400, "Invalid signature for #{organization}") unless Rack::Utils.secure_compare(sig, rsig)
+        halt(401, "Invalid signature for #{organization}")
       end
     end
 

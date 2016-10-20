@@ -1,15 +1,46 @@
-<h1><%= if organization; organization+' '; else; '' end %>Admin view</h1>
+<head>
+<title>Admin view</title>
+<style>
+table {
+	border-collapse: collapse
+}
+td, th {
+	text-align: left;
+	padding: 8px
+}
+tr:nth-child(even) {
+	background-color: #f2f2f2
+}
+</style>
+<body>
+<h1>Admin view<%= organization ? ": #{organization}" : '' %></h1>
 <table>
-	<tr><th>ID</th><% if organization.nil? %><th>Organization</th><% end %><th>Assignment</th><th>Repository</th><th>Commit</th><th>Status</th><th>Output</th></tr>
+	<tr>
+		<th>ID</th>
+		<th>Date and Time (<%= Time.now.zone %>)</th>
+		<% if organization.nil? %><th>Organization</th><% end %>
+		<th>Assignment</th>
+		<th>Repository</th>
+		<th>Commit</th>
+		<th>Status</th>
+		<th>Output</th>
+	</tr>
 	<% grades.each do |grade| %>
 	<tr>
 		<td><%= grade.id %></td>
+		<td><%= grade.created_at.localtime.strftime('%F  %T') %></td>
 		<% if organization.nil? %><td><%= grade.organization %></td><% end %>
 		<td><%= grade.assignment %></td>
 		<td><%= grade.repository %></td>
 		<td><a href="https://github.com/<%= grade.organization %>/<%= grade.repository %>/commit/<%= grade.commit %>"><%= grade.commit[0,7] %></a></td>
-		<td><%= case grade.status; when 'S'; 'Success'; when 'E'; 'Error'; when 'F'; 'Failure'; else; grade.status; end %></td>
-		<td><a href="/output/<%= grade.id %>">[output]</a></td>
+		<td><%= case grade.status
+			when 'R'; 'Running'
+			when 'S'; 'Success'
+			when 'E'; 'Error'
+			when 'F'; 'Failure'
+			else; grade.status
+			end %></td>
+		<td><% unless grade.status == 'R' %><a href="/output/<%= grade.id %>">[output]</a><% end %></td>
 	</tr>
 	<% end %>
 </table>

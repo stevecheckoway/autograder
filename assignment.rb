@@ -79,7 +79,7 @@ module AutoGrader
           desc = 'All autograding tests passed successfully'
         else
           state = 'failure'
-          desc = 'One ore more autograding tests failed'
+          desc = 'One or more autograding tests failed'
         end
         url = "https://github.com/#{full_name}/commit/#{commit}"
         status_options = { context: 'autograder', description: desc, target_url: url }
