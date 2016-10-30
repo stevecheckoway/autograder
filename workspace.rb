@@ -84,7 +84,6 @@ export -f comment
 timeout \
   --signal TERM \
   --kill-after #{delay.to_i} \
-  --preserve-status \
   #{timeout.to_i} \
   /bin/bash -x -e #{Shellwords.escape(path)} 3>.comment
         EOF
