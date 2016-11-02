@@ -12,7 +12,11 @@ RUN dpkg --add-architecture i386 && \
 		gcc-multilib \
 		g++-multilib \
 		make \
-		python && \
+		netcat-openbsd \
+		python \
+		lsof \
+		strace \
+		uuid-runtime && \
 	apt-get clean && \
 	rm -rf /var/lib/apt/lists/*
 
