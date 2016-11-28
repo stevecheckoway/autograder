@@ -11,7 +11,7 @@ Instructions
    password. Run `sudo visudo` and insert the following line.
 
    ```
-   autograder ALL=(ALL) NOPASSWD: /usr/local/bin/run-ag-image.sh
+   autograder ALL=(ALL) NOPASSWD: /usr/local/bin/run-ag-ubuntu.sh
    ```
 
 4. Run scripts in the docker image using `docker: ag-ubuntu` in the assignment

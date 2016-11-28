@@ -1,4 +1,4 @@
-FROM ubuntu:13.10
+FROM ubuntu:13.04
 MAINTAINER Stephen Checkoway <sfc@uic.edu>
 
 # Fix apt paths
