@@ -94,6 +94,8 @@ module AutoGrader
         body = "#{desc}:\n#{comment}"
       end
       body = "```\n#{body}\n```" if @config['codecomment']
+      body.encode!('UTF-16', undef: :replace, invalid: :replace, universal_newline: true)
+      body.encode!('UTF-8', undef: :replace, invalid: :replace, universal_newline: true)
       client.create_commit_comment(full_name, commit, body)
       !status.nil? && status.success?
     end
