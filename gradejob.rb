@@ -43,7 +43,7 @@ module AutoGrader
           status = success ? 'S' : 'F'
         rescue Exception => ex
           status = 'E'
-	  output = log.string + ex.to_s
+	  output = log.string + "\n" + ex.to_s + "\n" + ex.backtrace.join("\n")
           logger.error(output)
         end
         log.close
