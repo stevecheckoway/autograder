@@ -1,0 +1,55 @@
+##
+# You should look at the following URL's in order to grasp a solid understanding
+# of Nginx configuration files in order to fully unleash the power of Nginx.
+# http://wiki.nginx.org/Pitfalls
+# http://wiki.nginx.org/QuickStart
+# http://wiki.nginx.org/Configuration
+#
+# This file should live in `/etc/nginx/sites-available` with a symlink from
+# `/etc/nginx/sites-enabled`.
+##
+
+# Specify the socket file for the Puma application server.
+upstream autograder {
+	server unix:///var/run/autograder/autograder.sock;
+}
+
+# Prevent any non-TLS accesses. That is, 301 redirect to https.
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+	server_name SERVER.NAME.HERE;
+	return 301 https://$server_name$request_uri;
+}
+
+server {
+	# TLS configuration
+	listen 443 ssl default_server;
+	listen [::]:443 ssl default_server;
+	server_name SERVER.NAME.HERE;
+
+	# Set site-specific TLS and generic TLS parameters.
+	include snippets/ssl-$server_name.conf;
+	include snippets/ssl-params.conf;
+
+	root /var/www/html;
+	
+	# Try to serve files as files, then directories by appending a slash,
+	# and finally from the autograder.
+	location / {
+		try_files $uri $uri/ @autograder;
+	}
+
+	# Let's Encrypt directory needs to be accessible to prove control of
+	# the domain for auto-renew.
+	location ~ /.well-known {
+		allow all;
+	}
+
+	# Proxy connection (after terminating TLS) to the autograder
+	# application server.
+	location @autograder {
+		include proxy_params;
+		proxy_pass http://autograder;
+	}
+}
