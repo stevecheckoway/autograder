@@ -14,11 +14,12 @@ help me remember what I did.
 2. Check out the repo as `/var/lib/autograder/autograder`
 3. From inside the repo, run `bundle install --binstubs=sbin --path=vendor/bundle`
 4. Create `config/secrets.yaml` that looks like:
+
    ```
-   admin_password: 'PASSWORD HERE'
+   admin_password:         'PASSWORD HERE'
    github_webhooks_secret: 'WEBHOOKS SECRET HERE'
    ORGANIZATION_NAME:
-     admin_password: 'PASSWORD HERE'
+     admin_password:       'PASSWORD HERE'
    ```
    Multiple organizations can be supported, but they currently need the same
    webhooks secret.
@@ -33,6 +34,7 @@ help me remember what I did.
    probably doesn't work and should just be deleted.
 10. Start nginx and autograder using the `service` command.
 11. Create assignment files that look like `project1.yaml`:
+
     ```
     token:        GITHUB-PERSONAL-ACCESS-TOKEN
     organization: ORGANIZATION-NAME
