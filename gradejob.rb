@@ -26,7 +26,10 @@ module AutoGrader
       globs = [File.join(dir, "#{owner}/*.yaml"), File.join(dir, '*.yaml')]
       Dir.glob(globs).each do |path|
         assignment = Assignment.load(path)
-        next if assignment.nil?
+        if assignment.nil?
+          logger.info("Failed to load assignment #{path}")
+          next
+        end
         next unless assignment.match?(owner, repo, branch)
         logger.info("Running matching assignment #{path} on #{owner}/#{repo} #{branch}")
         grade = Grade.create(organization: owner,
