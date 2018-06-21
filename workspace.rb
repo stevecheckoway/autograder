@@ -50,6 +50,7 @@ module AutoGrader
       step('Shell script ' + path)
       comment = []
       env = { 'PATH' => '/usr/local/bin:/usr/bin:/bin',
+              'PS4' => '+ $(date +"%H:%M:%S"): ',
               'BASH_FUNC_comment%%' => '() { if [ $# -gt 0 ];then echo "$@" >&3;else cat >&3;fi }' }
       status = Subprocess.run('/bin/bash', '-x', '-e', path, fds: [:out, :err, 3],
                               chdir:@cwd, timeout: timeout, delay: delay,
@@ -81,7 +82,7 @@ comment() {
   fi
 }
 export -f comment
-timeout \
+PS4='+ $(date +"%H:%M:%S"): ' timeout \
   --signal TERM \
   --kill-after #{delay.to_i} \
   #{timeout.to_i} \
